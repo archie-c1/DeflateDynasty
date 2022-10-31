@@ -9,6 +9,7 @@ import {records} from '$lib/stores';
 import { round, sortHighAndLow } from './universalFunctions';
 import { Records } from '$lib/utils/dataClasses';
 import { getBrackets } from './leagueBrackets';
+import { browser } from '$app/environment';
 
 /**
  * getLeagueRecords obtains all the record for a league since it was first created
@@ -23,7 +24,7 @@ export const getLeagueRecords = async (refresh = false) => {
 
 	// if this isn't a refresh data call, check if there are already
 	// transactions stored in localStorage (long term)
-	if(!refresh) {
+	if(!refresh && browser) {
 		let localRecords = await JSON.parse(localStorage.getItem("records"));
 		// check if transactions have been saved to localStorage before
 		if(localRecords && localRecords.playoffData) {
@@ -92,7 +93,7 @@ export const getLeagueRecords = async (refresh = false) => {
 			rS
 		} = await processRegularSeason({leagueData, users, rosters, curSeason, week, regularSeason})
 
-		regularSeason = rS; // update the regular season records
+		regularSeason = rS; // update the regular season record
 
 		// post season data
 		const pS = await processPlayoffs({year, originalManagers, curSeason, week, playoffRecords})
@@ -125,10 +126,12 @@ export const getLeagueRecords = async (refresh = false) => {
 
 	const recordsData = {regularSeasonData, playoffData};
 
-	// update localStorage
-	localStorage.setItem("records", JSON.stringify(recordsData));
-
-	records.update(() => recordsData);
+    if(browser) {
+        // update localStorage
+        localStorage.setItem("records", JSON.stringify(recordsData));
+    
+        records.update(() => recordsData);
+    }
 
 	return recordsData;
 }
@@ -493,7 +496,7 @@ const digestBracket = ({bracket, playoffRecords, playoffRounds, matchupDifferent
 					const newMatchup = {...matchup}
 					let points = 0;
 					for(const k in newMatchup.points) {
-						points += newMatchup.points[k].reduce((t, nV) => t + nV);
+						points += newMatchup.points[k].reduce((t, nV) => t + nV, 0);
 					}
 					newMatchup.points = points;
 					matchupWeek.push(newMatchup);
